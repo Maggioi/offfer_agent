@@ -3,6 +3,7 @@ import docx
 import io
 import msoffcrypto
 import os
+import popups
 
 def uzupelnij_dokument():
     # 1. Wczytanie danych z kalkulatora Excel
@@ -64,11 +65,10 @@ def uzupelnij_dokument():
     elif plyta_raw == "tablica suchościeralna 2-str":
         plyta = "Twosided magnetic dry erasable board"
     
-    elif plyta_raw.startswith("DOWOLNA 1.3"):
-        plyta = "CPL on M3 class chipboard (D-s2,d0) /CPL on M1 class (s/fire) chipboard (B-s2,d0)"
+    elif plyta_raw.startswith("DOWOLNA"):
+        plyta = popups.wybor_plyty_popup()
 
-    elif plyta_raw.startswith("DOWOLNA 2.07"):
-        plyta = "Veneer on M3 chipboard (D-s2,d0) /Veneer on M1 (s/fire) chipboard (B-s2,d0)"
+    
 
 
     
@@ -78,8 +78,8 @@ def uzupelnij_dokument():
 
 
     # Mapowanie koloru toru
-    if kolor_toru_raw == 0:
-        kolor_toru = "Raw"
+    if not kolor_toru_raw or kolor_toru_raw == 0:
+        kolor_toru = "raw"
     elif kolor_toru_raw == 1:
         kolor_toru = "RAL 9010"
     elif kolor_toru_raw == 2:
@@ -88,7 +88,6 @@ def uzupelnij_dokument():
     # Mapowanie szkła
     if not szklo_raw:
         szklo = "-"
-        print("HAHAHAH")
     elif szklo_raw == "ESG 8 mm":
         szklo = "Surface glass 8mm ESG (toughened)"
     elif szklo_raw == "33.1":
@@ -109,8 +108,31 @@ def uzupelnij_dokument():
         dodatkowy_tor = "Additional track"
 
     # Mapowanie obniżenia
-    if obnizenie_raw >= 500:
+    if obnizenie_raw and dodatkowy_tor_raw >= 500:
         obnizenie = "Steel suspension"
+
+    # Mapowanie lakierowanych profili
+    if lakierowane_profile_raw == 1:
+        lakierowane_profile = "Powder coated RAL"
+    else:
+        lakierowane_profile = "Anodised"
+
+    # Mapowanie drzwi
+    drzwi = "-"
+    if liczba_DE and liczba_DE > 0:
+        drzwi += "Single door"
+        if liczba_DE > 1:
+            drzwi += f" x {liczba_DE}"
+        if liczba_DE2 and liczba_DE2 > 0:
+            drzwi += ", "
+
+    if liczba_DE2 and liczba_DE2 > 0:
+        drzwi += "Double door"
+        if liczba_DE2 > 1:
+            drzwi += f" x {liczba_DE2}"
+
+    # Mapowanie dodatkowego wyposażenia
+    additional_equipment = ""
 
     print(f"Pobrane dane z Excela:")
     print(f" - L = {dlugosc} mm")
@@ -152,6 +174,34 @@ def uzupelnij_dokument():
             # Podmiana rodzaju pyty
             if "pyta" in cell.text:
                 cell.text = cell.text.replace("pyta", plyta)
+
+            # Podmiana operacji
+            if "operacja" in cell.text:
+                cell.text = cell.text.replace("operacja", polautomat)
+            
+            # Podmiana koloru torów
+            if "tory" in cell.text:
+                cell.text = cell.text.replace("tory", kolor_toru)
+            
+            # Podmiana dźwi
+            if "drzwi" in cell.text:
+                cell.text = cell.text.replace("drzwi", drzwi)
+
+            # Podmiana szkła
+            if "szkło" in cell.text:
+                cell.text = cell.text.replace("szkło", szklo)
+            
+            # Podmiana lakieru profili
+            if "aluminium" in cell.text:
+                cell.text = cell.text.replace("aluminium", lakierowane_profile)
+            
+            # Podmiana dodatkowego wyposażenia
+            ...
+
+            # Podmiana ceny
+            if "Cena" in cell.text:
+                cell.text = cell.text.replace("Cena", str(cena))
+
 
     # 4. Zapisanie uzupełnionego dokumentu
     nowa_nazwa = "Nowy_krolik.docx"
