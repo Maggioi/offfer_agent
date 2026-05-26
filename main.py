@@ -4,9 +4,11 @@ import io
 import msoffcrypto
 import os
 import popups
+from dtu import duplicate_table_underneath
+import copy
 
-def fill_the_table(i=6):
-    # 1. Loading data from excel calculator
+def open_calculator():
+    '''Opening a passworded calculator'''
     f = open("password.txt")
     password = f.read()
     decrypted_workbook = io.BytesIO()
@@ -17,7 +19,11 @@ def fill_the_table(i=6):
 
     wb = openpyxl.load_workbook(decrypted_workbook, data_only=True)
     sheet = wb['KALKULATOR']
+    return sheet
 
+def load_transform_data(sheet, i):
+    '''Loading data from calculator'''
+    
     # Loading data from row nr i
     dlugosc = sheet[f'F{i}'].value        
     wysokosc = sheet[f'G{i}'].value      
@@ -95,7 +101,7 @@ def fill_the_table(i=6):
     elif szklo_raw == "44.1":
         szklo = "OPT 50 44.1 VSG/ Internal glass 44.2mm VSG (laminated)"
     else:
-        szklo == "Without glass - sourced locally"
+        szklo = "Without glass - sourced locally"
     
     # Mapowanie steering type
     if polautomat_raw == 1:
@@ -120,7 +126,7 @@ def fill_the_table(i=6):
         lakierowane_profile = "Anodised"
 
     # Mapping doors
-    drzwi = "No doors"
+    drzwi = ""
     if liczba_DE and liczba_DE > 0:
         drzwi += "Single door"
         if liczba_DE > 1:
@@ -132,7 +138,8 @@ def fill_the_table(i=6):
         drzwi += "Double door"
         if liczba_DE2 > 1:
             drzwi += f" x {liczba_DE2}"
-        
+    else:
+        drzwi = "-"
     # Mapping additional equipment:
     additional_equipment = ""
     for i in range(len(additional_equipment_list)):
@@ -144,18 +151,15 @@ def fill_the_table(i=6):
     
     akustyka = f"Rw = {akustyka} dB"
 
-    print(f"Pobrane dane z Excela:")
-    print(f" - L = {dlugosc} mm")
-    print(f" - H = {wysokosc} mm")
-    print(f" - Rw = {akustyka} dB")
-    print(f" - Zawieszenie = {zawieszenie}\n")
+    return (dlugosc, wysokosc, zawieszenie, liczba_modulow, akustyka,
+            plyta, polautomat, kolor_toru, drzwi, szklo, lakierowane_profile,
+            additional_equipment, cena)
 
+def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akustyka,
+            plyta, polautomat, kolor_toru, drzwi, szklo, lakierowane_profile,
+            additional_equipment, cena):
+    '''Making a table with a wall'''
     # 2. Opening of a Word Offer template
-    doc = docx.Document("krolik_doswiadczalny.docx")
-
-    # 3. Processing tables into Word file
-    if len(doc.tables) > 2:
-        tabela = doc.tables[2]
 
     for cell in tabela._cells:
         for paragraph in cell.paragraphs:
@@ -221,14 +225,44 @@ def fill_the_table(i=6):
                 # Replacement for the price
                 if "Cena" in run.text:
                     run.text = run.text.replace("Cena", str(cena))
-
+    return doc
             
-
+def save_offer(doc):
     # 4. Saving filled offer document.
     nowa_nazwa = "Nowy_krolik.docx"
     doc.save(nowa_nazwa)
     print(f"Sukces! Wygenerowano plik: {nowa_nazwa}")
     os.startfile("Nowy_krolik.docx")
     
-if __name__ == "__main__":    
-    fill_the_table()
+if __name__ == "__main__":
+    # Opening calculator and offer files.    
+    calculator_sheet = open_calculator()
+    doc = docx.Document("krolik_doswiadczalny.docx")
+
+    # Iterating through walls
+    i = 6
+    nowa_tabela = doc.tables[2]
+
+    while True:  
+        transformed_data = load_transform_data(calculator_sheet, i)
+        
+        # 1. Sprawdzamy, czy w kalkulatorze jest kolejna ściana do przerobienia
+        kolejne_i = i + 2
+        ma_kolejna_sciane = calculator_sheet[f'C{kolejne_i}'].value and calculator_sheet[f'C{kolejne_i}'].value > 0
+        
+        # 2. Jeśli tak, duplikujemy tabelę ZANIM ją wypełnimy (kiedy ma czyste znaczniki)
+        if ma_kolejna_sciane:
+            nastepna_tabela = duplicate_table_underneath(nowa_tabela, nowa_tabela, doc)
+            
+        # 3. Dopiero teraz wypełniamy obecną tabelę danymi
+        open_offer(doc, nowa_tabela, *transformed_data)
+        
+        # 4. Przechodzimy do kolejnej ściany
+        if ma_kolejna_sciane:
+            nowa_tabela = nastepna_tabela
+            i = kolejne_i
+        else:
+            break
+
+    save_offer(doc)
+    
