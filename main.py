@@ -79,7 +79,7 @@ def fill_the_table(i=6):
 
     # Mapping rail's color
     if not kolor_toru_raw or kolor_toru_raw == 0:
-        kolor_toru = "raw"
+        kolor_toru = "Raw"
     elif kolor_toru_raw == 1:
         kolor_toru = "RAL 9010"
     elif kolor_toru_raw == 2:
@@ -99,9 +99,9 @@ def fill_the_table(i=6):
     
     # Mapowanie steering type
     if polautomat_raw == 1:
-        polautomat = "semi-automatic"
+        polautomat = "Semi-automatic"
     else:
-        polautomat = "manual"
+        polautomat = "Manual"
     
     # Mapping additional track
     if dodatkowy_tor_raw and dodatkowy_tor_raw > 0:
@@ -120,7 +120,7 @@ def fill_the_table(i=6):
         lakierowane_profile = "Anodised"
 
     # Mapping doors
-    drzwi = "-"
+    drzwi = "No doors"
     if liczba_DE and liczba_DE > 0:
         drzwi += "Single door"
         if liczba_DE > 1:
@@ -142,6 +142,7 @@ def fill_the_table(i=6):
         else:
             additional_equipment += additional_equipment_list[i]
     
+    akustyka = f"Rw = {akustyka} dB"
 
     print(f"Pobrane dane z Excela:")
     print(f" - L = {dlugosc} mm")
@@ -164,19 +165,6 @@ def fill_the_table(i=6):
             # If the paragraph is empty, skip to the next one
             if not p_text:
                 continue
-                
-            # Special condition for Acoustics (Rw) — overwrite the text in the first run,
-            # and clear the rest to preserve the styling of the beginning of the line
-            if "Rw = " in p_text and "dB" in p_text:
-                if f"Rw = {akustyka} dB" not in p_text:
-                    if paragraph.runs:
-                        paragraph.runs[0].text = f"Rw = {akustyka} dB"
-                        # If Word split the old text into multiple runs, clear them out
-                        for run in paragraph.runs[1:]:
-                            run.text = ""
-                    else:
-                        paragraph.add_run(f"Rw = {akustyka} dB")
-                    continue # Move to the next paragraph since this one has been fully replaced
 
             # For all other standard replacements, safely iterate through the text runs
             for run in paragraph.runs:
@@ -190,18 +178,21 @@ def fill_the_table(i=6):
                 # Safe replacement for Dimensions (H)
                 if "Podaj wysokość" in run.text:
                     run.text = run.text.replace("Podaj wysokość", str(wysokosc))
-
+                    
                 # Safe replacement for Parking / Suspension setup
-                if "Kac bałagane" in run.text:
-                    run.text = run.text.replace("Kac bałagane", zawieszenie)
-                
+                if "Kac" in run.text:
+                    run.text = run.text.replace("Kac", zawieszenie)
+                   
                 # Replacement for the number of modules
                 if "Liczba modułów" in run.text:
                     run.text = run.text.replace("Liczba modułów", str(liczba_modulow))
+                
+                if "akustyka" in run.text:
+                    run.text = run.text.replace("akustyka", akustyka)
 
                 # Replacement for the board/panel type
-                if "pyta" in run.text:
-                    run.text = run.text.replace("pyta", plyta)
+                if "płyta" in run.text:
+                    run.text = run.text.replace("płyta", plyta)
 
                 # Replacement for the operation type
                 if "operacja" in run.text:
