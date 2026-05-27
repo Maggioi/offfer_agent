@@ -138,8 +138,11 @@ def load_transform_data(sheet, i):
         drzwi += "Double door"
         if liczba_DE2 > 1:
             drzwi += f" x {liczba_DE2}"
-    else:
+    
+    if (not liczba_DE and not liczba_DE2) or (liczba_DE == 0 and liczba_DE2 == 0):
         drzwi = "-"
+
+
     # Mapping additional equipment:
     additional_equipment = ""
     for i in range(len(additional_equipment_list)):
