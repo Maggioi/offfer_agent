@@ -5,7 +5,9 @@ import msoffcrypto
 import os
 import popups
 from dtu import duplicate_table_underneath
-import copy
+
+global calkowita_liczba_scian
+calkowita_liczba_scian = 0
 
 def open_calculator():
     '''Opening a passworded calculator'''
@@ -23,7 +25,7 @@ def open_calculator():
 
 def load_transform_data(sheet, i):
     '''Loading data from calculator'''
-    
+    global calkowita_liczba_scian
     # Loading data from row nr i
     dlugosc = sheet[f'F{i}'].value        
     wysokosc = sheet[f'G{i}'].value      
@@ -42,8 +44,10 @@ def load_transform_data(sheet, i):
     obnizenie_raw = sheet[f'X{i}'].value
     lakierowane_profile_raw = sheet[f'Y{i}'].value
     cena = sheet[f'AF{i}'].value
-
-
+    liczba_scian = sheet[f'C{i}'].value
+    print(f"Calkowita liczba scian: {calkowita_liczba_scian}")
+    calkowita_liczba_scian += liczba_scian
+    print(f"Calkowita liczba scian po dodaniu: {calkowita_liczba_scian}")
     # Mapping suspension type to text
     if parkowanie_raw and str(parkowanie_raw).strip().lower() == 'j':
         zawieszenie = "axis (-J-) / 1-point suspension"
@@ -154,14 +158,26 @@ def load_transform_data(sheet, i):
     
     akustyka = f"Rw = {akustyka} dB"
 
+    # Mapping the price
+
+    _ = 0
+    cena /= liczba_scian
+    cena = int(cena)
+    cena = f'{cena:,}'.replace(",", " ")
+    cena = str(cena)
+    if liczba_scian > 1:
+        cena += f" * {liczba_scian}"
+
+
     return (dlugosc, wysokosc, zawieszenie, liczba_modulow, akustyka,
             plyta, polautomat, kolor_toru, drzwi, szklo, lakierowane_profile,
-            additional_equipment, cena)
+            additional_equipment, cena, liczba_scian)
 
 def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akustyka,
             plyta, polautomat, kolor_toru, drzwi, szklo, lakierowane_profile,
-            additional_equipment, cena):
+            additional_equipment, cena, liczba_scian):
     '''Making a table with a wall'''
+    global calkowita_liczba_scian
     # 2. Opening of a Word Offer template
 
     for cell in tabela._cells:
@@ -177,7 +193,18 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
             for run in paragraph.runs:
                 if not run.text:
                     continue
-                    
+                
+                if "Wx" in run.text:
+                    print("*******************************************")
+                    if liczba_scian == 1:
+                        nr_sciany = f"W{calkowita_liczba_scian}"
+                    else:
+                        nr_sciany = f"W{calkowita_liczba_scian-liczba_scian+1}"
+                        nr_sciany += " - "
+                        nr_sciany += f"W{calkowita_liczba_scian}"
+
+                    run.text = run.text.replace("Wx", nr_sciany)
+
                 # Safe replacement for Dimensions (L)
                 if "Podaj długość" in run.text:
                     run.text = run.text.replace("Podaj długość", str(dlugosc))
@@ -185,7 +212,8 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
                 # Safe replacement for Dimensions (H)
                 if "Podaj wysokość" in run.text:
                     run.text = run.text.replace("Podaj wysokość", str(wysokosc))
-                    
+                if "W1" in run.text:
+                    print("HHHHHHHHHHUUUUUUUUUUUUUJ")
                 # Safe replacement for Parking / Suspension setup
                 if "Kac" in run.text:
                     run.text = run.text.replace("Kac", zawieszenie)
@@ -249,18 +277,18 @@ if __name__ == "__main__":
     while True:  
         transformed_data = load_transform_data(calculator_sheet, i)
         
-        # 1. Sprawdzamy, czy w kalkulatorze jest kolejna ściana do przerobienia
+        # 1. Checking if there is next wall
         kolejne_i = i + 2
         ma_kolejna_sciane = calculator_sheet[f'C{kolejne_i}'].value and calculator_sheet[f'C{kolejne_i}'].value > 0
         
-        # 2. Jeśli tak, duplikujemy tabelę ZANIM ją wypełnimy (kiedy ma czyste znaczniki)
+        # 2. If so, we duplicate the table BEFORE filling it in (when its pointers are empty)
         if ma_kolejna_sciane:
             nastepna_tabela = duplicate_table_underneath(nowa_tabela, nowa_tabela, doc)
             
-        # 3. Dopiero teraz wypełniamy obecną tabelę danymi
+        # 3. We are only now filling in the current table with data
         open_offer(doc, nowa_tabela, *transformed_data)
         
-        # 4. Przechodzimy do kolejnej ściany
+        # 4. Going to another wall
         if ma_kolejna_sciane:
             nowa_tabela = nastepna_tabela
             i = kolejne_i
