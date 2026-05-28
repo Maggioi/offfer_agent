@@ -56,6 +56,9 @@ def load_transform_data(sheet, i):
     else:
         zawieszenie = "-"
 
+    # Formatting length and height
+    dlugosc = f'{dlugosc:,}'.replace(",", " ")
+    wysokosc = f'{wysokosc:,}'.replace(",", " ")
 
     # Mapping panel types to text
     if plyta_raw == "BEZ PŁYT":
@@ -195,7 +198,6 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
                     continue
                 
                 if "Wx" in run.text:
-                    print("*******************************************")
                     if liczba_scian == 1:
                         nr_sciany = f"W{calkowita_liczba_scian}"
                     else:
@@ -212,8 +214,7 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
                 # Safe replacement for Dimensions (H)
                 if "Podaj wysokość" in run.text:
                     run.text = run.text.replace("Podaj wysokość", str(wysokosc))
-                if "W1" in run.text:
-                    print("HHHHHHHHHHUUUUUUUUUUUUUJ")
+
                 # Safe replacement for Parking / Suspension setup
                 if "Kac" in run.text:
                     run.text = run.text.replace("Kac", zawieszenie)
