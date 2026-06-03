@@ -5,16 +5,23 @@ import msoffcrypto
 import os
 import popups
 from dtu import duplicate_table_underneath
+from pathlib import Path
+from datetime import datetime
 
 global calkowita_liczba_scian
 calkowita_liczba_scian = 0
 
+
 def open_calculator():
     '''Opening a passworded calculator'''
+    global nazwa_oferty
     f = open("password.txt")
     password = f.read()
     decrypted_workbook = io.BytesIO()
-    with open("kalkulator_official.xlsx", "rb") as encrypted_workbook:
+    directory = Path.cwd()
+    nazwa_oferty = next(directory.glob("*.xlsx")).name
+
+    with open(nazwa_oferty, "rb") as encrypted_workbook:
         file = msoffcrypto.OfficeFile(encrypted_workbook)
         file.load_key(password=password)
         file.decrypt(decrypted_workbook)
@@ -26,6 +33,9 @@ def open_calculator():
 def load_transform_data(sheet, i):
     '''Loading data from calculator'''
     global calkowita_liczba_scian
+    global nr_oferty
+    global klient
+    global projekt
     # Loading data from row nr i
     dlugosc = sheet[f'F{i}'].value        
     wysokosc = sheet[f'G{i}'].value      
@@ -45,9 +55,15 @@ def load_transform_data(sheet, i):
     lakierowane_profile_raw = sheet[f'Y{i}'].value
     cena = sheet[f'AF{i}'].value
     liczba_scian = sheet[f'C{i}'].value
-    print(f"Calkowita liczba scian: {calkowita_liczba_scian}")
-    calkowita_liczba_scian += liczba_scian
-    print(f"Calkowita liczba scian po dodaniu: {calkowita_liczba_scian}")
+    calkowita_liczba_scian += liczba_scian 
+    nr_oferty = nazwa_oferty.split(",")[0]
+    klient = nazwa_oferty.split(",")[1]
+    if len(nazwa_oferty.split(",")) > 2:
+        projekt = nazwa_oferty.split(",")[2]
+        projekt = projekt.replace(".xlsx", "")
+    global cena_wszystkich
+    cena_wszystkich = str(sheet[f'AF2'].value)
+
     # Mapping suspension type to text
     if parkowanie_raw and str(parkowanie_raw).strip().lower() == 'j':
         zawieszenie = "axis (-J-) / 1-point suspension"
@@ -181,7 +197,24 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
             additional_equipment, cena, liczba_scian):
     '''Making a table with a wall'''
     global calkowita_liczba_scian
-    # 2. Opening of a Word Offer template
+
+    for paragraph in doc.paragraphs:
+        for run in paragraph.runs:
+
+            if "123-MM-26" in run.text:
+                    run.text = run.text.replace("123-MM-26", nr_oferty)
+                    run.text = run.text.replace("02.02.2026r.", f"{datetime.now().strftime("%d.%m.%Y")}r")
+
+
+    for cell in doc.tables[0]._cells:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+
+                    if "klient" in run.text:
+                        run.text = run.text.replace("klient", klient)
+                    if "projekt" in run.text:
+                        run.text = run.text.replace("projekt", projekt)
+                
 
     for cell in tabela._cells:
         for paragraph in cell.paragraphs:
@@ -196,7 +229,7 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
             for run in paragraph.runs:
                 if not run.text:
                     continue
-                
+
                 if "Wx" in run.text:
                     if liczba_scian == 1:
                         nr_sciany = f"W{calkowita_liczba_scian}"
@@ -258,13 +291,27 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
                 if "Cena" in run.text:
                     run.text = run.text.replace("Cena", str(cena))
     return doc
-            
+
+def update_summary_table(doc):
+    """Updating the last table"""
+    summary_table = doc.tables[-1]
+    for cell in summary_table._cells:
+        for paragraph in cell.paragraphs:
+            for run in paragraph.runs:
+
+                if "Cena wszystkich" in run.text:
+                    run.text = run.text.replace("Cena wszystkich", f"Total {calkowita_liczba_scian} walls")
+                if "ewro" in run.text:
+                    run.text = run.text.replace("ewro", cena_wszystkich)
+
+
 def save_offer(doc):
     # 4. Saving filled offer document.
-    nowa_nazwa = "Nowy_krolik.docx"
-    doc.save(nowa_nazwa)
-    print(f"Sukces! Wygenerowano plik: {nowa_nazwa}")
-    os.startfile("Nowy_krolik.docx")
+    global nazwa_oferty
+    nazwa_oferty = nazwa_oferty.replace(".xlsx", ".docx")
+    doc.save(nazwa_oferty)
+    print(f"Sukces! Wygenerowano plik: {nazwa_oferty}")
+    os.startfile(nazwa_oferty)
     
 if __name__ == "__main__":
     # Opening calculator and offer files.    
@@ -296,5 +343,6 @@ if __name__ == "__main__":
         else:
             break
 
+    update_summary_table(doc)
     save_offer(doc)
     
