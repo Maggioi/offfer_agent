@@ -139,7 +139,7 @@ def load_transform_data(sheet, i):
         additional_equipment_list.append(dodatkowy_tor)
 
     # Mapping suspension
-    if obnizenie_raw and dodatkowy_tor_raw >= 500:
+    if obnizenie_raw and obnizenie_raw >= 500:
         obnizenie = "Steel suspension"
         additional_equipment_list.append(obnizenie)
 
