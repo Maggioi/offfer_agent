@@ -62,7 +62,8 @@ def load_transform_data(sheet, i):
         projekt = nazwa_oferty.split(",")[2]
         projekt = projekt.replace(".xlsx", "")
     global cena_wszystkich
-    cena_wszystkich = str(sheet[f'AF2'].value)
+    cena_wszystkich = sheet[f'AF2'].value
+    cena_wszystkich = f'{cena_wszystkich:,}'.replace(",", " ")
 
     # Mapping suspension type to text
     if parkowanie_raw and str(parkowanie_raw).strip().lower() == 'j':
@@ -200,7 +201,7 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
 
     for paragraph in doc.paragraphs:
         for run in paragraph.runs:
-
+            # Dating the offer
             if "123-MM-26" in run.text:
                     run.text = run.text.replace("123-MM-26", nr_oferty)
                     run.text = run.text.replace("02.02.2026r.", f"{datetime.now().strftime("%d.%m.%Y")}r")
@@ -209,7 +210,7 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
     for cell in doc.tables[0]._cells:
             for paragraph in cell.paragraphs:
                 for run in paragraph.runs:
-
+                    # Naming the client and the project
                     if "klient" in run.text:
                         run.text = run.text.replace("klient", klient)
                     if "projekt" in run.text:
@@ -294,7 +295,7 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
 
 def update_summary_table(doc):
     """Updating the last table"""
-    summary_table = doc.tables[-1]
+    summary_table = doc.tables[-2]
     for cell in summary_table._cells:
         for paragraph in cell.paragraphs:
             for run in paragraph.runs:
@@ -302,7 +303,7 @@ def update_summary_table(doc):
                 if "Cena wszystkich" in run.text:
                     run.text = run.text.replace("Cena wszystkich", f"Total {calkowita_liczba_scian} walls")
                 if "ewro" in run.text:
-                    run.text = run.text.replace("ewro", cena_wszystkich)
+                    run.text = run.text.replace("ewro", str(cena_wszystkich))
 
 
 def save_offer(doc):
