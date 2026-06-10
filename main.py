@@ -64,7 +64,8 @@ def load_transform_data(sheet, i):
     global cena_wszystkich
     cena_wszystkich = sheet[f'AF2'].value
     cena_wszystkich = f'{cena_wszystkich:,}'.replace(",", " ")
-
+    cena_wszystkich = cena_wszystkich.split(".")[0]
+    
     # Mapping suspension type to text
     if parkowanie_raw and str(parkowanie_raw).strip().lower() == 'j':
         zawieszenie = "axis (-J-) / 1-point suspension"
@@ -103,7 +104,7 @@ def load_transform_data(sheet, i):
 
     
     # Mapping concealed profiles
-    if ukryte_krawedzie_raw == 1 or akustyka >= 54:
+    if ukryte_krawedzie_raw == 1 or int(akustyka) >= 54:
         ukryte_krawedzie = "Concealed profiles"
         additional_equipment_list.append(ukryte_krawedzie)
 
@@ -175,6 +176,9 @@ def load_transform_data(sheet, i):
             additional_equipment += ", "
         else:
             additional_equipment += additional_equipment_list[i]
+    if len(additional_equipment) == 0:
+        additional_equipment = "-"
+
     
     akustyka = f"Rw = {akustyka} dB"
 
@@ -186,7 +190,7 @@ def load_transform_data(sheet, i):
     cena = f'{cena:,}'.replace(",", " ")
     cena = str(cena)
     if liczba_scian > 1:
-        cena += f" * {liczba_scian}"
+        cena = str(liczba_scian) + " x " + cena
 
 
     return (dlugosc, wysokosc, zawieszenie, liczba_modulow, akustyka,
@@ -261,8 +265,9 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
                     run.text = run.text.replace("akustyka", akustyka)
 
                 # Replacement for the board/panel type
-                if "płyta" in run.text:
-                    run.text = run.text.replace("płyta", plyta)
+                if "pyta" in run.text:
+                    print("woohoo")
+                    run.text = run.text.replace("pyta", plyta)
 
                 # Replacement for the operation type
                 if "operacja" in run.text:
@@ -295,7 +300,7 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
 
 def update_summary_table(doc):
     """Updating the last table"""
-    summary_table = doc.tables[-2]
+    summary_table = doc.tables[-3]
     for cell in summary_table._cells:
         for paragraph in cell.paragraphs:
             for run in paragraph.runs:
