@@ -15,8 +15,8 @@ calkowita_liczba_scian = 0
 def open_calculator():
     '''Opening a passworded calculator'''
     global nazwa_oferty
-    f = open("password.txt")
-    password = f.read()
+    with open("password.txt", "r") as f:
+        password = f.read()
     decrypted_workbook = io.BytesIO()
     directory = Path.cwd()
     nazwa_oferty = next(directory.glob("*.xlsx")).name
@@ -39,7 +39,9 @@ def load_transform_data(sheet, i):
     # Loading data from row nr i
     dlugosc = sheet[f'F{i}'].value        
     wysokosc = sheet[f'G{i}'].value      
-    akustyka = sheet[f'J{i}'].value       
+    akustyka = sheet[f'J{i}'].value
+    if akustyka == "ei" or akustyka == "EI" or akustyka == "Ei" or akustyka == "eI":
+        akustyka = 52       
     parkowanie_raw = sheet[f'H{i}'].value 
     liczba_modulow = sheet[f'N{i}'].value
     plyta_raw = sheet[f'P{i}'].value
@@ -61,11 +63,14 @@ def load_transform_data(sheet, i):
     if len(nazwa_oferty.split(",")) > 2:
         projekt = nazwa_oferty.split(",")[2]
         projekt = projekt.replace(".xlsx", "")
+    else:
+        projekt = ""
+        klient = klient.split(".")[0]
     global cena_wszystkich
     cena_wszystkich = sheet[f'AF2'].value
     cena_wszystkich = f'{cena_wszystkich:,}'.replace(",", " ")
     cena_wszystkich = cena_wszystkich.split(".")[0]
-    
+
     # Mapping suspension type to text
     if parkowanie_raw and str(parkowanie_raw).strip().lower() == 'j':
         zawieszenie = "axis (-J-) / 1-point suspension"
@@ -98,13 +103,14 @@ def load_transform_data(sheet, i):
     elif plyta_raw.startswith("DOWOLNA"):
         plyta = popups.wybor_plyty_popup()
 
-    
+    if akustyka == 52:
+        plyta += " EI30"
     # Mapping of additional equipment
     additional_equipment_list = []
 
     
     # Mapping concealed profiles
-    if ukryte_krawedzie_raw == 1 or int(akustyka) >= 54:
+    if ukryte_krawedzie_raw == 1 or int(akustyka) >= 52:
         ukryte_krawedzie = "Concealed profiles"
         additional_equipment_list.append(ukryte_krawedzie)
 
@@ -119,7 +125,9 @@ def load_transform_data(sheet, i):
     # Mapping glass
     if not szklo_raw:
         szklo = "-"
-    elif szklo_raw == "ESG 8 mm":
+    else:
+        akustyka = 50
+    if szklo_raw == "ESG 8 mm":
         szklo = "Surface glass 8mm ESG (toughened)"
     elif szklo_raw == "33.1":
         szklo = "OPT 50 33.1 VSG"
@@ -136,12 +144,12 @@ def load_transform_data(sheet, i):
     
     # Mapping additional track
     if dodatkowy_tor_raw and dodatkowy_tor_raw > 0:
-        dodatkowy_tor = "Additional track"
+        dodatkowy_tor = f"Additional track {dodatkowy_tor_raw}mm"
         additional_equipment_list.append(dodatkowy_tor)
 
     # Mapping suspension
     if obnizenie_raw and obnizenie_raw >= 500:
-        obnizenie = "Steel suspension"
+        obnizenie = f"Steel suspension {obnizenie_raw}mm"
         additional_equipment_list.append(obnizenie)
 
     # Mapping color powded profiles
@@ -305,10 +313,18 @@ def update_summary_table(doc):
         for paragraph in cell.paragraphs:
             for run in paragraph.runs:
 
-                if "Cena wszystkich" in run.text:
-                    run.text = run.text.replace("Cena wszystkich", f"Total {calkowita_liczba_scian} walls")
-                if "ewro" in run.text:
-                    run.text = run.text.replace("ewro", str(cena_wszystkich))
+                if calkowita_liczba_scian > 1:
+                    if "Cena wszystkich" in run.text:
+                        run.text = run.text.replace("Cena wszystkich", f"Total {calkowita_liczba_scian} walls")
+                    if "ewro" in run.text:
+                        run.text = run.text.replace("ewro", str(cena_wszystkich))
+                else:
+                    if "Cena wszystkich" in run.text:
+                        run.text = run.text.replace("Cena wszystkich:", "")
+                    if "ewro" in run.text:
+                        run.text = run.text.replace("ewro", "")
+            
+                    
 
 
 def save_offer(doc):
@@ -351,4 +367,3 @@ if __name__ == "__main__":
 
     update_summary_table(doc)
     save_offer(doc)
-    
