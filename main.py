@@ -7,19 +7,14 @@ import popups
 from dtu import duplicate_table_underneath
 from pathlib import Path
 from datetime import datetime
+import sys
 
-global calkowita_liczba_scian
-calkowita_liczba_scian = 0
-
-
-def open_calculator():
+def open_calculator(nazwa_oferty):
     '''Opening a passworded calculator'''
-    global nazwa_oferty
+
     with open("password.txt", "r") as f:
         password = f.read()
     decrypted_workbook = io.BytesIO()
-    directory = Path.cwd()
-    nazwa_oferty = next(directory.glob("*.xlsx")).name
 
     with open(nazwa_oferty, "rb") as encrypted_workbook:
         file = msoffcrypto.OfficeFile(encrypted_workbook)
@@ -30,18 +25,18 @@ def open_calculator():
     sheet = wb['KALKULATOR']
     return sheet
 
-def load_transform_data(sheet, i):
-    '''Loading data from calculator'''
-    global calkowita_liczba_scian
-    global nr_oferty
-    global klient
-    global projekt
+def load_data(sheet, nazwa_oferty, i):
+    """Loading data from the calculator"""
+    # global calkowita_liczba_scian
+    # global nr_oferty
+    # global klient
+    # global projekt
     # Loading data from row nr i
     dlugosc = sheet[f'F{i}'].value        
     wysokosc = sheet[f'G{i}'].value      
     akustyka = sheet[f'J{i}'].value
-    if akustyka == "ei" or akustyka == "EI" or akustyka == "Ei" or akustyka == "eI":
-        akustyka = 52       
+    # if akustyka == "ei" or akustyka == "EI" or akustyka == "Ei" or akustyka == "eI":
+    #     akustyka = 52       
     parkowanie_raw = sheet[f'H{i}'].value 
     liczba_modulow = sheet[f'N{i}'].value
     plyta_raw = sheet[f'P{i}'].value
@@ -57,122 +52,146 @@ def load_transform_data(sheet, i):
     lakierowane_profile_raw = sheet[f'Y{i}'].value
     cena = sheet[f'AF{i}'].value
     liczba_scian = sheet[f'C{i}'].value
-    calkowita_liczba_scian += liczba_scian 
-    nr_oferty = nazwa_oferty.split(",")[0]
-    klient = nazwa_oferty.split(",")[1]
-    if len(nazwa_oferty.split(",")) > 2:
-        projekt = nazwa_oferty.split(",")[2]
-        projekt = projekt.replace(".xlsx", "")
-    else:
-        projekt = ""
-        klient = klient.split(".")[0]
-    global cena_wszystkich
+    calkowita_liczba_scian += liczba_scian
+    # global cena_wszystkich
     cena_wszystkich = sheet[f'AF2'].value
-    cena_wszystkich = f'{cena_wszystkich:,}'.replace(",", " ")
-    cena_wszystkich = cena_wszystkich.split(".")[0]
+    # cena_wszystkich = f'{cena_wszystkich:,}'.replace(",", " ")
+    # cena_wszystkich = cena_wszystkich.split(".")[0]
 
-    # Mapping suspension type to text
-    if parkowanie_raw and str(parkowanie_raw).strip().lower() == 'j':
-        zawieszenie = "axis (-J-) / 1-point suspension"
-    elif parkowanie_raw and str(parkowanie_raw).strip().lower() == 'npn':
-        zawieszenie = "lateral (-NPN-) / 2-point"
-    else:
-        zawieszenie = "-"
+    data = {
+        "dlugosc" : dlugosc,
+        "wysokosc" : wysokosc,
+        "akustyka" : akustyka,
+        "parkowanie_raw" : parkowanie_raw,
+        "liczba_modulow": liczba_modulow,
+        "plyta_raw" : plyta_raw,
+        "klasa_palnosci_raw" : klasa_palnosci_raw,
+        "ukryte_krawedzie_raw" : ukryte_krawedzie_raw,
+        "kolor_toru_raw" : kolor_toru_raw,
+        "szklo_raw" : szklo_raw,
+        "liczba_DE" : liczba_DE,
+        "liczba_DE2" : liczba_DE2,
+        "polautomat_raw" : polautomat_raw,
+        "dodatkowy_tor_raw" : dodatkowy_tor_raw,
+        "obnizenie_raw" : obnizenie_raw,
+        "lakierowane_profile_raw" : lakierowane_profile_raw,
+        "cena" : cena,
+        "liczba_scian" : liczba_scian,
+        "cena_wszystkich" : cena_wszystkich,
+        "nazwa_oferty" : nazwa_oferty
+    }
+    return data
+
+def transform_data(data):
+    '''Transforming the data from calculator'''  
 
     # Formatting length and height
-    dlugosc = f'{dlugosc:,}'.replace(",", " ")
-    wysokosc = f'{wysokosc:,}'.replace(",", " ")
+    dlugosc = f'{data["dlugosc"]:,}'.replace(",", " ")
+    wysokosc = f'{data["wysokosc"]:,}'.replace(",", " ")
+    dlugosc, wysokosc = str(dlugosc), str(wysokosc)
+
+    # Mapping acoustics level
+    if str(data["akustyka"]).strip().lower() == "ei":
+        akustyka = 52
+    elif data["szklo_raw"]:
+        akustyka = 50
+    else:
+        akustyka = data["akustyka"]
+    
+
+    # Liczba modułów
+    liczba_modulow = str(data["liczba_modulow"])
+    
+    # Mapping suspension type to text
+    if str(data["parkowanie_raw"]).strip().lower() == 'j':
+        parkowanie = "axis (-J-) / 1-point suspension"
+    elif str(data["parkowanie_raw"]).strip().lower() == 'npn':
+        parkowanie = "lateral (-NPN-) / 2-point"
 
     # Mapping panel types to text
-    if plyta_raw == "BEZ PŁYT":
+    if data["plyta_raw"] == "BEZ PŁYT":
         plyta = "finishing panels sourced locally"
-
-    elif plyta_raw.startswith("laminowana"):
-        if klasa_palnosci_raw == 1:
-            plyta = "Stopfire Melamine faced chipboard M1 (B - s2,d0)"
-        elif str(klasa_palnosci_raw).lower() == "ei":
+    elif data["plyta_raw"].startswith("laminowana"):
+        if data["klasa_palnosci_raw"] == 1:
             plyta = "Stopfire Melamine faced chipboard M1 (B - s2,d0)"
         else:
             plyta = "Melamine faced chipboard M3 class (D - s2,d0)"
-        
-    elif plyta_raw == "tablica suchościeralna 1-str":
+    elif data["plyta_raw"] == "tablica suchościeralna 1-str":
         plyta = "Onesided magnetic dry erasable board"
-    elif plyta_raw == "tablica suchościeralna 2-str":
+    elif data["plyta_raw"] == "tablica suchościeralna 2-str":
         plyta = "Twosided magnetic dry erasable board"
-    
-    elif plyta_raw.startswith("DOWOLNA"):
+    elif data["plyta_raw"].startswith("DOWOLNA"):
         plyta = popups.wybor_plyty_popup()
 
     if akustyka == 52:
         plyta += " EI30"
-    # Mapping of additional equipment
-    additional_equipment_list = []
 
-    
+
+    additional_equipment_list = []
     # Mapping concealed profiles
-    if ukryte_krawedzie_raw == 1 or int(akustyka) >= 52:
+    if data["ukryte_krawedzie_raw"] == 1 or akustyka >= 52:
         ukryte_krawedzie = "Concealed profiles"
         additional_equipment_list.append(ukryte_krawedzie)
 
     # Mapping rail's color
-    if not kolor_toru_raw or kolor_toru_raw == 0:
+    if not data["kolor_toru_raw"] or data["kolor_toru_raw"] == 0:
         kolor_toru = "Raw"
-    elif kolor_toru_raw == 1:
+    elif data["kolor_toru_raw"] == 1:
         kolor_toru = "RAL 9010"
-    elif kolor_toru_raw == 2:
+    elif data["kolor_toru_raw"] == 2:
         kolor_toru = "Other RAL"
     
     # Mapping glass
-    if not szklo_raw:
+    if not data["szklo_raw"]:
         szklo = "-"
     else:
         akustyka = 50
-    if szklo_raw == "ESG 8 mm":
+    if data["szklo_raw"] == "ESG 8 mm":
         szklo = "Surface glass 8mm ESG (toughened)"
-    elif szklo_raw == "33.1":
+    elif ["szklo_raw"] == "33.1":
         szklo = "OPT 50 33.1 VSG"
-    elif szklo_raw == "44.1":
+    elif data["szklo_raw"] == "44.1":
         szklo = "OPT 50 44.1 VSG/ Internal glass 44.2mm VSG (laminated)"
-    else:
+    elif data["szklo_raw"]:
         szklo = "Without glass - sourced locally"
     
     # Mapowanie steering type
-    if polautomat_raw == 1:
+    if data["polautomat_raw"] == 1:
         polautomat = "Semi-automatic"
     else:
         polautomat = "Manual"
     
     # Mapping additional track
-    if dodatkowy_tor_raw and dodatkowy_tor_raw > 0:
-        dodatkowy_tor = f"Additional track {dodatkowy_tor_raw}mm"
+    if data["dodatkowy_tor_raw"]:
+        dodatkowy_tor = f"Additional track {data["dodatkowy_tor_raw"]}mm"
         additional_equipment_list.append(dodatkowy_tor)
 
     # Mapping suspension
-    if obnizenie_raw and obnizenie_raw >= 500:
-        obnizenie = f"Steel suspension {obnizenie_raw}mm"
+    if data["obnizenie_raw"] and data["obnizenie_raw"] >= 500:
+        obnizenie = f"Steel suspension {data["obnizenie_raw"]}mm"
         additional_equipment_list.append(obnizenie)
 
     # Mapping color powded profiles
-    if lakierowane_profile_raw == 1:
+    if data["lakierowane_profile_raw"] == 1:
         lakierowane_profile = "Powder coated RAL"
     else:
         lakierowane_profile = "Anodised"
 
     # Mapping doors
     drzwi = ""
-    if liczba_DE and liczba_DE > 0:
+    if data["liczba_DE"] and data["liczba_DE"] > 0:
         drzwi += "Single door"
-        if liczba_DE > 1:
-            drzwi += f" x {liczba_DE}"
-        if liczba_DE2 and liczba_DE2 > 0:
+        if data["liczba_DE"] > 1:
+            drzwi += f" x {data["liczba_DE"]}"
+        if data["liczba_DE2"] and data["liczba_DE2"] > 0:
             drzwi += ", "
 
-    if liczba_DE2 and liczba_DE2 > 0:
+    if data["liczba_DE2"] and data["liczba_DE2"] > 0:
         drzwi += "Double door"
-        if liczba_DE2 > 1:
-            drzwi += f" x {liczba_DE2}"
+        if data["liczba_DE2"] > 1:
+            drzwi += f" x {data["liczba_DE2"]}"
     
-    if (not liczba_DE and not liczba_DE2) or (liczba_DE == 0 and liczba_DE2 == 0):
+    if (not data["liczba_DE"] and not data["liczba_DE2"]) or (data["liczba_DE"] == 0 and data["liczba_DE2"] == 0):
         drzwi = "-"
 
 
@@ -190,32 +209,83 @@ def load_transform_data(sheet, i):
     
     akustyka = f"Rw = {akustyka} dB"
 
+    # Mapping number of walls
+    liczba_scian = data["liczba_scian"]
+
     # Mapping the price
-
-    _ = 0
-    cena /= liczba_scian
-    cena = int(cena)
+    cena = data["cena"]
     cena = f'{cena:,}'.replace(",", " ")
-    cena = str(cena)
+
     if liczba_scian > 1:
+        cena /= liczba_scian
+        cena = int(cena)
         cena = str(liczba_scian) + " x " + cena
+    
+    cena = str(cena)
+    # Mapping the client's and project's name, number of offer
 
+    nazwa_oferty = data["nazwa_oferty"]
+    nr_oferty = nazwa_oferty.split(",")[0]
+    klient = nazwa_oferty.split(",")[1].strip()
+    if len(nazwa_oferty.split(",")) > 2:
+        projekt = nazwa_oferty.split(",")[2]
+        projekt = projekt.replace(".xlsx", "")
+    else:
+        projekt = ""
 
-    return (dlugosc, wysokosc, zawieszenie, liczba_modulow, akustyka,
-            plyta, polautomat, kolor_toru, drzwi, szklo, lakierowane_profile,
-            additional_equipment, cena, liczba_scian)
+    # Mapping price of all walls:
+    cena_wszystkich = str(data["cena_wszystkich"])
 
-def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akustyka,
-            plyta, polautomat, kolor_toru, drzwi, szklo, lakierowane_profile,
-            additional_equipment, cena, liczba_scian):
-    '''Making a table with a wall'''
-    global calkowita_liczba_scian
+    data = {
+        "dlugosc" : dlugosc,
+        "wysokosc" : wysokosc,
+        "akustyka" : str(akustyka),
+        "parkowanie" : parkowanie,
+        "liczba_modulow": liczba_modulow,
+        "plyta" : plyta,
+        "kolor_toru" : kolor_toru,
+        "szklo" : szklo,
+        "drzwi" : drzwi,
+        "polautomat" : polautomat,
+        "lakierowane_profile" : lakierowane_profile,
+        "cena" : cena,
+        "liczba_scian" : liczba_scian,
+        "cena_wszystkich" : cena_wszystkich,
+        "additional_equipment" : additional_equipment,
+        "cena_wszystkich" : cena_wszystkich,
+        "nr_oferty" : nr_oferty,
+        "klient" : klient,
+        "projekt" : projekt
+    }
+
+    return data
+    
+
+def calculate_number_of_walls(liczba_scian, calkowita_liczba_scian):
+    calkowita_liczba_scian += liczba_scian
+
+    if liczba_scian == 1:
+        nr_sciany = f"W{calkowita_liczba_scian}"
+    else:
+        nr_sciany = f"W{calkowita_liczba_scian-liczba_scian+1}"
+        nr_sciany += " - "
+        nr_sciany += f"W{calkowita_liczba_scian}"
+
+    data = {
+        "nr_sciany" : nr_sciany,
+        "calkowita_liczba_scian" : calkowita_liczba_scian
+    }
+
+    return data
+    
+def open_offer(doc, tabela, data, liczba_scian):
+    '''Filling wall table with informations'''
 
     for paragraph in doc.paragraphs:
         for run in paragraph.runs:
             # Dating the offer
             if "123-MM-26" in run.text:
-                    run.text = run.text.replace("123-MM-26", nr_oferty)
+                    run.text = run.text.replace("123-MM-26", data["nr_oferty"])
                     run.text = run.text.replace("02.02.2026r.", f"{datetime.now().strftime("%d.%m.%Y")}r")
 
 
@@ -224,9 +294,9 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
                 for run in paragraph.runs:
                     # Naming the client and the project
                     if "klient" in run.text:
-                        run.text = run.text.replace("klient", klient)
+                        run.text = run.text.replace("klient", data["klient"])
                     if "projekt" in run.text:
-                        run.text = run.text.replace("projekt", projekt)
+                        run.text = run.text.replace("projekt", data["projekt"])
                 
 
     for cell in tabela._cells:
@@ -244,69 +314,63 @@ def open_offer(doc, tabela, dlugosc, wysokosc, zawieszenie, liczba_modulow, akus
                     continue
 
                 if "Wx" in run.text:
-                    if liczba_scian == 1:
-                        nr_sciany = f"W{calkowita_liczba_scian}"
-                    else:
-                        nr_sciany = f"W{calkowita_liczba_scian-liczba_scian+1}"
-                        nr_sciany += " - "
-                        nr_sciany += f"W{calkowita_liczba_scian}"
-
-                    run.text = run.text.replace("Wx", nr_sciany)
+                    
+                    run.text = run.text.replace("Wx", liczba_scian["nr_sciany"])
 
                 # Safe replacement for Dimensions (L)
                 if "Podaj długość" in run.text:
-                    run.text = run.text.replace("Podaj długość", str(dlugosc))
+                    run.text = run.text.replace("Podaj długość", data["dlugosc"])
                     
                 # Safe replacement for Dimensions (H)
                 if "Podaj wysokość" in run.text:
-                    run.text = run.text.replace("Podaj wysokość", str(wysokosc))
+                    run.text = run.text.replace("Podaj wysokość", data["wysokosc"])
 
                 # Safe replacement for Parking / Suspension setup
                 if "Kac" in run.text:
-                    run.text = run.text.replace("Kac", zawieszenie)
+                    run.text = run.text.replace("Kac", data["zawieszenie"])
                    
                 # Replacement for the number of modules
                 if "Liczba modułów" in run.text:
-                    run.text = run.text.replace("Liczba modułów", str(liczba_modulow))
+                    run.text = run.text.replace("Liczba modułów", data["liczba_modulow"])
                 
                 if "akustyka" in run.text:
-                    run.text = run.text.replace("akustyka", akustyka)
+                    run.text = run.text.replace("akustyka", data["akustyka"])
 
                 # Replacement for the board/panel type
                 if "pyta" in run.text:
                     print("woohoo")
-                    run.text = run.text.replace("pyta", plyta)
+                    run.text = run.text.replace("pyta", data["plyta"])
 
                 # Replacement for the operation type
                 if "operacja" in run.text:
-                    run.text = run.text.replace("operacja", polautomat)
+                    run.text = run.text.replace("operacja", data["polautomat"])
                 
                 # Replacement for the track color
                 if "tory" in run.text:
-                    run.text = run.text.replace("tory", kolor_toru)
+                    run.text = run.text.replace("tory", data["kolor_toru"])
                 
                 # Replacement for the door type
                 if "drzwi" in run.text:
-                    run.text = run.text.replace("drzwi", drzwi)
+                    run.text = run.text.replace("drzwi", data["drzwi"])
 
                 # Replacement for the glass type
                 if "szkło" in run.text:
-                    run.text = run.text.replace("szkło", szklo)
+                    run.text = run.text.replace("szkło", data["szklo"])
                 
                 # Replacement for the profile powder coating / finish
                 if "aluminium" in run.text:
-                    run.text = run.text.replace("aluminium", lakierowane_profile)
+                    run.text = run.text.replace("aluminium", data["lakierowane_profile"])
                 
                 # Replacement for additional equipment:
                 if "adyszynal" in run.text:
-                    run.text = run.text.replace("adyszynal", additional_equipment)
+                    run.text = run.text.replace("adyszynal", data["additional_equipment"])
 
                 # Replacement for the price
                 if "Cena" in run.text:
-                    run.text = run.text.replace("Cena", str(cena))
+                    run.text = run.text.replace("Cena", data["cena"])
     return doc
 
-def update_summary_table(doc):
+def update_summary_table(doc, calkowita_liczba_scian, cena_wszystkich):
     """Updating the last table"""
     summary_table = doc.tables[-3]
     for cell in summary_table._cells:
@@ -317,7 +381,7 @@ def update_summary_table(doc):
                     if "Cena wszystkich" in run.text:
                         run.text = run.text.replace("Cena wszystkich", f"Total {calkowita_liczba_scian} walls")
                     if "ewro" in run.text:
-                        run.text = run.text.replace("ewro", str(cena_wszystkich))
+                        run.text = run.text.replace("ewro", cena_wszystkich)
                 else:
                     if "Cena wszystkich" in run.text:
                         run.text = run.text.replace("Cena wszystkich:", "")
@@ -325,8 +389,6 @@ def update_summary_table(doc):
                         run.text = run.text.replace("ewro", "")
             
                     
-
-
 def save_offer(doc):
     # 4. Saving filled offer document.
     global nazwa_oferty
@@ -334,18 +396,25 @@ def save_offer(doc):
     doc.save(nazwa_oferty)
     print(f"Sukces! Wygenerowano plik: {nazwa_oferty}")
     os.startfile(nazwa_oferty)
-    
-if __name__ == "__main__":
-    # Opening calculator and offer files.    
-    calculator_sheet = open_calculator()
-    doc = docx.Document("krolik_doswiadczalny.docx")
 
+def run_program():
+    """Running the program"""
+
+    # Opening calculator and offer files.
+    directory = Path.cwd()
+    nazwa_oferty = next(directory.glob("*.xlsx")).name
+
+    calculator_sheet = open_calculator(nazwa_oferty)
+    doc = docx.Document("krolik_doswiadczalny.docx")
+    
     # Iterating through walls
     i = 6
     nowa_tabela = doc.tables[2]
 
-    while True:  
-        transformed_data = load_transform_data(calculator_sheet, i)
+    while True:
+        data = load_data(calculator_sheet, i)
+        transformed_data = transform_data(data, i)
+        liczba_scian = transformed_data["liczba_scian"]
         
         # 1. Checking if there is next wall
         kolejne_i = i + 2
@@ -356,7 +425,7 @@ if __name__ == "__main__":
             nastepna_tabela = duplicate_table_underneath(nowa_tabela, nowa_tabela, doc)
             
         # 3. We are only now filling in the current table with data
-        open_offer(doc, nowa_tabela, *transformed_data)
+        open_offer(doc, nowa_tabela, transformed_data)
         
         # 4. Going to another wall
         if ma_kolejna_sciane:
@@ -367,3 +436,11 @@ if __name__ == "__main__":
 
     update_summary_table(doc)
     save_offer(doc)
+    sys.exit()
+
+if __name__ == "__main__":
+
+    run_program()
+
+    
+  
