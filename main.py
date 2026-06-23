@@ -27,16 +27,11 @@ def open_calculator(nazwa_oferty):
 
 def load_data(sheet, nazwa_oferty, i):
     """Loading data from the calculator"""
-    # global calkowita_liczba_scian
-    # global nr_oferty
-    # global klient
-    # global projekt
+
     # Loading data from row nr i
     dlugosc = sheet[f'F{i}'].value        
     wysokosc = sheet[f'G{i}'].value      
-    akustyka = sheet[f'J{i}'].value
-    # if akustyka == "ei" or akustyka == "EI" or akustyka == "Ei" or akustyka == "eI":
-    #     akustyka = 52       
+    akustyka = sheet[f'J{i}'].value       
     parkowanie_raw = sheet[f'H{i}'].value 
     liczba_modulow = sheet[f'N{i}'].value
     plyta_raw = sheet[f'P{i}'].value
@@ -52,11 +47,8 @@ def load_data(sheet, nazwa_oferty, i):
     lakierowane_profile_raw = sheet[f'Y{i}'].value
     cena = sheet[f'AF{i}'].value
     liczba_scian = sheet[f'C{i}'].value
-    calkowita_liczba_scian += liczba_scian
-    # global cena_wszystkich
     cena_wszystkich = sheet[f'AF2'].value
-    # cena_wszystkich = f'{cena_wszystkich:,}'.replace(",", " ")
-    # cena_wszystkich = cena_wszystkich.split(".")[0]
+
 
     data = {
         "dlugosc" : dlugosc,
@@ -112,7 +104,7 @@ def transform_data(data):
     if data["plyta_raw"] == "BEZ PŁYT":
         plyta = "finishing panels sourced locally"
     elif data["plyta_raw"].startswith("laminowana"):
-        if data["klasa_palnosci_raw"] == 1:
+        if data["klasa_palnosci_raw"] == 1 or akustyka == 52:
             plyta = "Stopfire Melamine faced chipboard M1 (B - s2,d0)"
         else:
             plyta = "Melamine faced chipboard M3 class (D - s2,d0)"
@@ -214,14 +206,17 @@ def transform_data(data):
 
     # Mapping the price
     cena = data["cena"]
-    cena = f'{cena:,}'.replace(",", " ")
 
     if liczba_scian > 1:
         cena /= liczba_scian
         cena = int(cena)
+        cena = str(cena)
         cena = str(liczba_scian) + " x " + cena
-    
-    cena = str(cena)
+    else:
+        cena = f'{cena:,}'.replace(",", " ")
+        cena = str(cena).split(".")[0]
+
+    liczba_scian = str(liczba_scian)
     # Mapping the client's and project's name, number of offer
 
     nazwa_oferty = data["nazwa_oferty"]
@@ -234,7 +229,12 @@ def transform_data(data):
         projekt = ""
 
     # Mapping price of all walls:
-    cena_wszystkich = str(data["cena_wszystkich"])
+
+    cena_wszystkich = data["cena_wszystkich"]
+    cena_wszystkich = f'{cena_wszystkich:,}'.replace(",", " ")
+    cena_wszystkich = str(cena_wszystkich)
+    cena_wszystkich = cena_wszystkich.split(".")[0]
+
 
     data = {
         "dlugosc" : dlugosc,
@@ -260,25 +260,8 @@ def transform_data(data):
 
     return data
     
-
-def calculate_number_of_walls(liczba_scian, calkowita_liczba_scian):
-    calkowita_liczba_scian += liczba_scian
-
-    if liczba_scian == 1:
-        nr_sciany = f"W{calkowita_liczba_scian}"
-    else:
-        nr_sciany = f"W{calkowita_liczba_scian-liczba_scian+1}"
-        nr_sciany += " - "
-        nr_sciany += f"W{calkowita_liczba_scian}"
-
-    data = {
-        "nr_sciany" : nr_sciany,
-        "calkowita_liczba_scian" : calkowita_liczba_scian
-    }
-
-    return data
     
-def open_offer(doc, tabela, data, liczba_scian):
+def open_offer(doc, tabela, data, nr_sciany):
     '''Filling wall table with informations'''
 
     for paragraph in doc.paragraphs:
@@ -315,7 +298,7 @@ def open_offer(doc, tabela, data, liczba_scian):
 
                 if "Wx" in run.text:
                     
-                    run.text = run.text.replace("Wx", liczba_scian["nr_sciany"])
+                    run.text = run.text.replace("Wx", nr_sciany)
 
                 # Safe replacement for Dimensions (L)
                 if "Podaj długość" in run.text:
@@ -327,7 +310,7 @@ def open_offer(doc, tabela, data, liczba_scian):
 
                 # Safe replacement for Parking / Suspension setup
                 if "Kac" in run.text:
-                    run.text = run.text.replace("Kac", data["zawieszenie"])
+                    run.text = run.text.replace("Kac", data["parkowanie"])
                    
                 # Replacement for the number of modules
                 if "Liczba modułów" in run.text:
@@ -338,7 +321,6 @@ def open_offer(doc, tabela, data, liczba_scian):
 
                 # Replacement for the board/panel type
                 if "pyta" in run.text:
-                    print("woohoo")
                     run.text = run.text.replace("pyta", data["plyta"])
 
                 # Replacement for the operation type
@@ -365,7 +347,7 @@ def open_offer(doc, tabela, data, liczba_scian):
                 if "adyszynal" in run.text:
                     run.text = run.text.replace("adyszynal", data["additional_equipment"])
 
-                # Replacement for the price
+                # Replacement for the price 
                 if "Cena" in run.text:
                     run.text = run.text.replace("Cena", data["cena"])
     return doc
@@ -388,10 +370,23 @@ def update_summary_table(doc, calkowita_liczba_scian, cena_wszystkich):
                     if "ewro" in run.text:
                         run.text = run.text.replace("ewro", "")
             
-                    
-def save_offer(doc):
+def calculate_nr_of_walls(calkowita_liczba_scian, liczba_scian):
+    """Calculating number of walls"""
+    calkowita_liczba_scian += liczba_scian
+    if liczba_scian == 1:
+        nr_sciany = f'W{calkowita_liczba_scian}'
+    else:
+        nr_sciany = f'W{calkowita_liczba_scian-liczba_scian+1}-W{calkowita_liczba_scian}'
+
+    data = {
+        "calkowita_liczba_scian" : calkowita_liczba_scian,
+        "nr_sciany" : nr_sciany
+    }
+
+    return data
+
+def save_offer(doc, nazwa_oferty):
     # 4. Saving filled offer document.
-    global nazwa_oferty
     nazwa_oferty = nazwa_oferty.replace(".xlsx", ".docx")
     doc.save(nazwa_oferty)
     print(f"Sukces! Wygenerowano plik: {nazwa_oferty}")
@@ -401,7 +396,7 @@ def run_program():
     """Running the program"""
 
     # Opening calculator and offer files.
-    directory = Path.cwd()
+    directory = Path(__file__).parent
     nazwa_oferty = next(directory.glob("*.xlsx")).name
 
     calculator_sheet = open_calculator(nazwa_oferty)
@@ -410,12 +405,18 @@ def run_program():
     # Iterating through walls
     i = 6
     nowa_tabela = doc.tables[2]
+    calkowita_liczba_scian = 0
+    
 
     while True:
-        data = load_data(calculator_sheet, i)
-        transformed_data = transform_data(data, i)
+        data = load_data(calculator_sheet, nazwa_oferty, i)
+        transformed_data = transform_data(data)
         liczba_scian = transformed_data["liczba_scian"]
-        
+
+        liczby_scian = calculate_nr_of_walls(calkowita_liczba_scian, int(liczba_scian))
+        calkowita_liczba_scian = liczby_scian["calkowita_liczba_scian"]
+        nr_sciany = liczby_scian["nr_sciany"]
+
         # 1. Checking if there is next wall
         kolejne_i = i + 2
         ma_kolejna_sciane = calculator_sheet[f'C{kolejne_i}'].value and calculator_sheet[f'C{kolejne_i}'].value > 0
@@ -425,7 +426,7 @@ def run_program():
             nastepna_tabela = duplicate_table_underneath(nowa_tabela, nowa_tabela, doc)
             
         # 3. We are only now filling in the current table with data
-        open_offer(doc, nowa_tabela, transformed_data)
+        open_offer(doc, nowa_tabela, transformed_data, nr_sciany)
         
         # 4. Going to another wall
         if ma_kolejna_sciane:
@@ -434,8 +435,8 @@ def run_program():
         else:
             break
 
-    update_summary_table(doc)
-    save_offer(doc)
+    update_summary_table(doc, calkowita_liczba_scian, transformed_data["cena_wszystkich"])
+    save_offer(doc, nazwa_oferty)
     sys.exit()
 
 if __name__ == "__main__":
