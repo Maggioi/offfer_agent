@@ -21,7 +21,8 @@ input_data = {
     "cena" : 9500,
     "liczba_scian" : 1,
     "cena_wszystkich" : 9500,
-    "nazwa_oferty" : "2137-MM-26, Scianex"
+    "nazwa_oferty" : "2137-MM-26, Scianex",
+    "plyta_wybrana" : False
 }
 
 @pytest.mark.parametrize(
@@ -45,7 +46,10 @@ input_data = {
                 ({},"additional_equipment" , "Concealed profiles"),
                 ({},"nr_oferty" , "2137-MM-26"),
                 ({},"klient" , "Scianex"),
-                ({},"projekt" , "")
+                ({},"projekt" , ""),
+                ({},"plyta_wybrana" ,False),
+                ({},"certyfikacja_BRI", " (Certified by BRI)"),
+                ({},"system", "Optimal 110")
         ]
 )
 def test_transform_data(updates, key, expected_value):

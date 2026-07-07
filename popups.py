@@ -23,68 +23,86 @@ def show_yes_no_popup():
 
     root.destroy()
 
-def wybor_plyty_popup():
+import tkinter as tk
+from tkinter import messagebox
+
+def wybor_popup(items, wielokrotny=False):
     root = tk.Tk()
     root.withdraw() 
 
     popup = tk.Toplevel()
     popup.title("Wybór materiału")
-    popup.geometry("450x380")
+    popup.geometry("450x420")  # Delikatnie powiększone na wypadek wielu opcji
     popup.attributes("-topmost", True)
     popup.grab_set()
 
-    final_choice = "AAAAAAAAAA"
-    items = [
-        "CPL on M3 class chipboard (D-s2,d0)", 
-        "CPL on M1 class (s/fire) chipboard (B-s2,d0)", 
-        "HPL on M3 class chipboard (D-s2,d0)", 
-        "HPL on M1 class (s/fire) chipboard (B-s2,d0)",
-        "Veneer on M3 chipboard (D-s2,d0)", 
-        "Veneer on M1 (s/fire) chipboard (B-s2,d0)"
-    ]
-    
-    # Jedna wspólna zmienna dla wszystkich opcji. 
-    # Ustawiamy wartość początkową na pusty string, żeby domyślnie nic nie było zaznaczone.
-    selected_item = tk.StringVar(value="")
+    # Dynamiczne dostosowanie nagłówka
+    instrukcja = "Wybierz opcje (minimum jedna):" if wielokrotny else "Wybierz jedną opcję (wymagane):"
+    tk.Label(popup, text=instrukcja, font=("Arial", 11, "bold")).pack(pady=15)
 
-    tk.Label(popup, text="Wybierz jedną opcję (wymagane):", font=("Arial", 11, "bold")).pack(pady=15)
+    # Przygotowanie struktur danych w zależności od trybu
+    zmienne_check = {}  # Słownik na zmienne dla Checkbuttonów {nazwa: BooleanVar}
+    zmienna_radio = tk.StringVar(value="")  # Pojedyncza zmienna dla Radiobuttonów
 
-    # Generowanie przycisków Radiobutton
+    # Generowanie przycisków
     for item in items:
-        rb = tk.Radiobutton(
-            popup, 
-            text=item, 
-            variable=selected_item,  # Wszystkie przyciski współdzielą tę samą zmienną
-            value=item,              # Tę wartość przyjmie zmienna, gdy klikniesz ten przycisk
-            font=("Arial", 10),
-            wraplength=380,   
-            justify="left"    
-        )
-        rb.pack(anchor="w", padx=30, pady=4)
+        if wielokrotny:
+            # Każdy checkbutton potrzebuje własnej zmiennej True/False
+            var = tk.BooleanVar(value=False)
+            zmienne_check[item] = var
+            btn = tk.Checkbutton(
+                popup, 
+                text=item, 
+                variable=var, 
+                font=("Arial", 10),
+                wraplength=380,   
+                justify="left"
+            )
+        else:
+            # Wszystkie radiobuttony dzielą jedną zmienną tekstową
+            btn = tk.Radiobutton(
+                popup, 
+                text=item, 
+                variable=zmienna_radio, 
+                value=item, 
+                font=("Arial", 10),
+                wraplength=380,   
+                justify="left"
+            )
+        btn.pack(anchor="w", padx=30, pady=4)
+
+    # Zmienna na wynik (unikanie 'global')
+    wynik = [] if wielokrotny else None
 
     def on_submit():
-        global choice
-        # Pobieramy aktualnie zaznaczoną wartość
-        choice = selected_item.get()
+        nonlocal wynik  # Pozwala zmodyfikować zmienną 'wynik' z wyższego zakresu
         
-        # Walidacja: Jeśli zmienna jest pusta, użytkownik nic nie kliknął
-        if not choice:
-            messagebox.showwarning(
-                "Wymagany wybór", 
-                "Musisz zaznaczyć jedną opcję przed przesłaniem!"
-            )
-        
-       # messagebox.showinfo("Sukces", f"Wybrano:\n\n{choice}")
+        if wielokrotny:
+            # Wyciągamy tylko te elementy, które zostały zaznaczone (True)
+            wybrane = [nazwa for nazwa, var in zmienne_check.items() if var.get()]
+            
+            if not wybrane:
+                messagebox.showwarning("Wymagany wybór", "Musisz zaznaczyć przynajmniej jedną opcję!")
+                return  # Przerywa funkcję, nie zamyka okna
+            
+            wynik = wybrane
+        else:
+            wybrane = zmienna_radio.get()
+            
+            if not wybrane:
+                messagebox.showwarning("Wymagany wybór", "Musisz zaznaczyć jedną opcję przed przesłaniem!")
+                return  # Przerywa funkcję, nie zamyka okna
+            
+            wynik = wybrane
+
         popup.destroy()
         root.quit()
         
-    
     submit_btn = tk.Button(popup, text="Zatwierdź", command=on_submit, bg="#4CAF50", fg="white", width=15)
     submit_btn.pack(pady=20)
 
     root.mainloop()
-    return choice
+    return wynik
 
 if __name__ == "__main__":
-    show_yes_no_popup()
-    wybor_plyty_popup()
+    ...

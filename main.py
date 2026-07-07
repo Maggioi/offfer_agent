@@ -8,6 +8,7 @@ from dtu import duplicate_table_underneath
 from pathlib import Path
 from datetime import datetime
 import sys
+import formulas
 
 def open_calculator(nazwa_oferty):
     '''Opening a passworded calculator'''
@@ -90,6 +91,31 @@ def transform_data(data):
     else:
         akustyka = data["akustyka"]
     
+    # Checking if it's not OP50
+    if akustyka == 45:
+        items = [
+            "Optimal 110",
+            "Optimal 50",
+        ]
+        if data['plyta_raw'] == "BEZ PŁYT":
+            items.append("Optimal 50 glass")
+        op50 = popups.wybor_popup(items)
+
+        if "Optimal 50" in op50:
+            system = "Optimal 50"
+            certyfikacja_BRI = ""
+            if "glass" in op50:
+                data["cena"] += data["dlugosc"] / 1000 * data['wysokosc'] / 1000 * 275 / 4.3
+                akustyka = 33
+            else:
+                akustyka = 32
+        else:
+            system = "Optimal 110"
+            certyfikacja_BRI = " (Certified by BRI)"
+    else:
+        op50 = False
+        system = "Optimal 110"
+        certyfikacja_BRI = " (Certified by BRI)"
 
     # Liczba modułów
     liczba_modulow = str(data["liczba_modulow"])
@@ -103,6 +129,8 @@ def transform_data(data):
     # Mapping panel types to text
     if data["plyta_raw"] == "BEZ PŁYT":
         plyta = "finishing panels sourced locally"
+        if op50 and "glass" in op50:
+            plyta = "-"
     elif data["plyta_raw"].startswith("laminowana"):
         if data["klasa_palnosci_raw"] == 1 or akustyka == 52:
             plyta = "Stopfire Melamine faced chipboard M1 (B - s2,d0)"
@@ -113,7 +141,19 @@ def transform_data(data):
     elif data["plyta_raw"] == "tablica suchościeralna 2-str":
         plyta = "Twosided magnetic dry erasable board"
     elif data["plyta_raw"].startswith("DOWOLNA"):
-        plyta = popups.wybor_plyty_popup()
+        if not data["plyta_wybrana"]:
+            items = [
+            "CPL on M3 class chipboard (D-s2,d0)", 
+            "CPL on M1 class (s/fire) chipboard (B-s2,d0)", 
+            "HPL on M3 class chipboard (D-s2,d0)", 
+            "HPL on M1 class (s/fire) chipboard (B-s2,d0)",
+            "Veneer on M3 chipboard (D-s2,d0)", 
+            "Veneer on M1 (s/fire) chipboard (B-s2,d0)"
+        ]
+            plyta = popups.wybor_popup(items)
+            data["plyta_wybrana"] = plyta
+        else:
+            plyta = data["plyta_wybrana"]
 
     if akustyka == 52:
         plyta += " EI30"
@@ -136,6 +176,8 @@ def transform_data(data):
     # Mapping glass
     if not data["szklo_raw"]:
         szklo = "-"
+        if op50 and "glass" in op50:
+            szklo = "OPT 50 33.1 VSG"
     else:
         akustyka = 50
     if data["szklo_raw"] == "ESG 8 mm":
@@ -255,7 +297,10 @@ def transform_data(data):
         "cena_wszystkich" : cena_wszystkich,
         "nr_oferty" : nr_oferty,
         "klient" : klient,
-        "projekt" : projekt
+        "projekt" : projekt,
+        "plyta_wybrana" : data["plyta_wybrana"],
+        "certyfikacja_BRI" : certyfikacja_BRI,
+        "system" : system
     }
 
     return data
@@ -299,6 +344,12 @@ def open_offer(doc, tabela, data, nr_sciany):
                 if "Wx" in run.text:
                     
                     run.text = run.text.replace("Wx", nr_sciany)
+                
+                if "certyfikacja" in run.text:
+                    run.text = run.text.replace("certyfikacja", data["certyfikacja_BRI"])
+                
+                if "ile" in run.text:
+                    run.text = run.text.replace("ile", data["system"])
 
                 # Safe replacement for Dimensions (L)
                 if "Podaj długość" in run.text:
@@ -385,6 +436,31 @@ def calculate_nr_of_walls(calkowita_liczba_scian, liczba_scian):
 
     return data
 
+def calculate_additions(nazwa_oferty):
+    """Calculating additions"""
+
+    items = [ 
+        "Single door",
+        "Double door",
+        "Powder coated profiles in RAL"
+    ]
+
+    wybor = popups.wybor_popup(items, wielokrotny=True)
+
+    if "Single door" in wybor:
+        ...
+
+    xl_model = formulas.ExcelModel().loads(nazwa_oferty)
+    target_input = f'[{nazwa_oferty}]KALKULATOR!T6'
+    dependent_formula = f'[{nazwa_oferty}]KALKULATOR!AF6'
+    results = xl_model.calculate(inputs={
+        target_input: 1
+    })
+    sheet = open_calculator(nazwa_oferty)
+    print(sheet['AF6'])
+    new_value = results[dependent_formula].value
+    print(new_value)
+
 def save_offer(doc, nazwa_oferty):
     # 4. Saving filled offer document.
     nazwa_oferty = nazwa_oferty.replace(".xlsx", ".docx")
@@ -394,7 +470,6 @@ def save_offer(doc, nazwa_oferty):
 
 def run_program():
     """Running the program"""
-
     # Opening calculator and offer files.
     directory = Path(__file__).parent
     nazwa_oferty = next(directory.glob("*.xlsx")).name
@@ -407,10 +482,13 @@ def run_program():
     nowa_tabela = doc.tables[2]
     calkowita_liczba_scian = 0
     
+    plyta_wybrana = False
 
     while True:
         data = load_data(calculator_sheet, nazwa_oferty, i)
-        transformed_data = transform_data(data)
+        data["plyta_wybrana"] = plyta_wybrana
+        transformed_data = transform_data(data) 
+        plyta_wybrana = transformed_data['plyta_wybrana']
         liczba_scian = transformed_data["liczba_scian"]
 
         liczby_scian = calculate_nr_of_walls(calkowita_liczba_scian, int(liczba_scian))
@@ -442,6 +520,9 @@ def run_program():
 if __name__ == "__main__":
 
     run_program()
-
+    # directory = Path(__file__).parent
+    # nazwa_oferty = next(directory.glob("*.xlsx")).name
+    # calculate_additions('587-MM-26, Espaces Mobiles, DP4138.xlsx')
+    
     
   
