@@ -12,7 +12,7 @@ def run_program():
     directory = Path(__file__).parent
     nazwa_oferty = next(directory.glob("*.xlsx")).name
 
-    calculator_sheet = open_calculator(nazwa_oferty)
+    calculator_sheet = open_calculator(nazwa_oferty)['KALKULATOR']
     doc = docx.Document("krolik_doswiadczalny.docx")
     
     # Iterating through walls
@@ -50,17 +50,17 @@ def run_program():
             i = kolejne_i
         else:
             break
-
+    calculate_additions(directory, nazwa_oferty)
     update_summary_table(doc, calkowita_liczba_scian, transformed_data["cena_wszystkich"])
     save_offer(doc, nazwa_oferty)
     sys.exit()
 
 if __name__ == "__main__":
 
-    run_program()
-    # directory = Path(__file__).parent
-    # nazwa_oferty = next(directory.glob("*.xlsx")).name
-    # calculate_additions('587-MM-26, Espaces Mobiles, DP4138.xlsx')
+    # run_program()
+    directory = Path(__file__).parent
+    nazwa_oferty = next(directory.glob("*.xlsx")).name
+    calculate_additions(directory,'587-MM-26, Espaces Mobiles, DP4138.xlsx')
     
     
   

@@ -17,8 +17,7 @@ def open_calculator(nazwa_oferty):
         file.decrypt(decrypted_workbook)
 
     wb = openpyxl.load_workbook(decrypted_workbook, data_only=True)
-    sheet = wb['KALKULATOR']
-    return sheet   
+    return wb   
     
 def open_offer(doc, tabela, data, nr_sciany):
     '''Filling wall table with informations'''
@@ -134,7 +133,20 @@ def update_summary_table(doc, calkowita_liczba_scian, cena_wszystkich):
                         run.text = run.text.replace("Cena wszystkich:", "")
                     if "ewro" in run.text:
                         run.text = run.text.replace("ewro", "")
+
+def decrypt_excel_file(source, destination):
+    """Decrypting at bytes level, preserving formulas"""
+
+    with open("password.txt", "r") as f:
+            password = f.read()
             
+    with open(source, "rb") as f:
+        office_file = msoffcrypto.OfficeFile(f)
+        office_file.load_key(password=password)
+        
+        with open(destination, "wb") as decrypted:
+            office_file.decrypt(decrypted)
+
 def save_offer(doc, nazwa_oferty):
     # 4. Saving filled offer document.
     nazwa_oferty = nazwa_oferty.replace(".xlsx", ".docx")

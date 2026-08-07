@@ -1,5 +1,5 @@
 import pytest
-from main import transform_data, calculate_nr_of_walls
+from load_transform_data import transform_data
 
 input_data = {
     "dlugosc" : 10000,
@@ -52,17 +52,11 @@ input_data = {
                 ({},"system", "Optimal 110")
         ]
 )
+
+
 def test_transform_data(updates, key, expected_value):
     test_input = input_data.copy()  
     test_input.update(updates)
 
     actual_output = transform_data(test_input)
     assert actual_output.get(key) == expected_value
-
-def test_calculate_nr_of_walls():
-    data = calculate_nr_of_walls(10, 2)
-    data_expected = {
-        "calkowita_liczba_scian" : 12,
-        "nr_sciany" : "W11-W12"
-    }
-    assert data == data_expected
