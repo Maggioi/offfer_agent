@@ -3,6 +3,7 @@ import msoffcrypto
 from datetime import datetime
 import io
 import os
+import docx
 
 def open_calculator(nazwa_oferty):
     '''Opening a passworded calculator'''
@@ -116,23 +117,60 @@ def open_offer(doc, tabela, data, nr_sciany):
                     run.text = run.text.replace("Cena", data["cena"])
     return doc
 
-def update_summary_table(doc, calkowita_liczba_scian, cena_wszystkich):
+def update_summary_table(doc, calkowita_liczba_scian, cena_wszystkich, additional_items, doplaty):
     """Updating the last table"""
     summary_table = doc.tables[-3]
+
+    if len(additional_items) > 0:
+        old_line = summary_table.rows[-1]
+        for _ in range(len(additional_items)):
+            new_line = summary_table.add_row()
+            new_line.cells[1].merge(new_line.cells[2])
+            new_line.cells[0].text = f"{additional_items[_]}:"
+            new_line.cells[1].text = f"+ {doplaty[_]}"
+            new_line.height = old_line.height
+
+            
+            for cell in old_line.cells:
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        # copying font from the row above to paste it later
+                        if "Cena wszystkich" in run.text:
+                            font_cena = run.font.name
+                            font_size_cena = run.font.size
+
+            # CELL FORMATTING
+            i = 0
+            for cell in new_line.cells:
+                cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.CENTER
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                            run.font.name = font_cena
+                            run.font.size = font_size_cena
+                            if i == 1:
+                                run.bold = True
+                                paragraph.alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.CENTER                   
+                i += 1
+    
     for cell in summary_table._cells:
         for paragraph in cell.paragraphs:
             for run in paragraph.runs:
 
-                if calkowita_liczba_scian > 1:
-                    if "Cena wszystkich" in run.text:
+            #if calkowita_liczba_scian > 1:
+                if "Cena wszystkich" in run.text:
+                    if calkowita_liczba_scian > 1:
                         run.text = run.text.replace("Cena wszystkich", f"Total {calkowita_liczba_scian} walls")
-                    if "ewro" in run.text:
-                        run.text = run.text.replace("ewro", cena_wszystkich)
-                else:
-                    if "Cena wszystkich" in run.text:
-                        run.text = run.text.replace("Cena wszystkich:", "")
-                    if "ewro" in run.text:
-                        run.text = run.text.replace("ewro", "")
+                    else:
+                        run.text = run.text.replace("Cena wszystkich", f"Total {calkowita_liczba_scian} wall")
+                if "ewro" in run.text:
+                    run.text = run.text.replace("ewro", cena_wszystkich)
+
+            # #else:
+            #     if "Cena wszystkich" in run.text:
+            #         run.text = run.text.replace("Cena wszystkich:", "")
+            #     if "ewro" in run.text:
+            #         run.text = run.text.replace("ewro", "")
+        
 
 def decrypt_excel_file(source, destination):
     """Decrypting at bytes level, preserving formulas"""

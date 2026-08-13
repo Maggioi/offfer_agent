@@ -1,7 +1,7 @@
 import popups
 import win32com.client
 from files_managment import decrypt_excel_file
-from popups import wybor_i_tekst_popup
+import os
 
 def calculate_nr_of_walls(calkowita_liczba_scian, liczba_scian):
     """Calculating number of walls"""
@@ -58,12 +58,12 @@ def calculate_additions(directory, nazwa_oferty):
         "NPN",
         "Rails in RAL 9010",
         "Other RAL of rails",
-        "CPL",
-        "HPL",
-        "M1 Melamine",
-        "M1 CPL",
-        "M1 HPL",
-        "Other covering panels",
+        # "CPL",
+        # "HPL",
+        # "M1 Melamine",
+        # "M1 CPL",
+        # "M1 HPL",
+        # "Other covering panels",
         "45dB",
         "49dB",
         "51dB",
@@ -177,7 +177,11 @@ def calculate_additions(directory, nazwa_oferty):
                 sheet.Range(f'{kolumna2}{i}').value = values2[i]
             i += 2
         print(f'{addition_type} : {doplata}')
+
         return addition_type, doplata
+    
+    additional_items = []
+    doplaty = []
 
     if "No additions" not in wybor:
         excel = win32com.client.Dispatch("Excel.Application")
@@ -190,39 +194,28 @@ def calculate_additions(directory, nazwa_oferty):
         wb = excel.Workbooks.Open(str(directory) + "\\" + f"decrypted{nazwa_oferty}")
         sheet = wb.Sheets("KALKULATOR")
         cena_przed = sheet.Range('AF2').value
-        additional_items = []
+
 
         if "Single door" in wybor:
             additional_item, doplata = calculate_addition("Single door", sheet, cena_przed)
-            additionals = {
-                "additional_item" : additional_item,
-                "doplata" : doplata
-            }
-            additional_items.append(additionals)
+            additional_items.append(additional_item)
+            doplaty.append(doplata)
         if "Double door" in wybor:
             additional_item, doplata = calculate_addition("Double door", sheet, cena_przed)
-            additionals = {
-                "additional_item" : additional_item,
-                "doplata" : doplata
-            }
+            additional_items.append(additional_item)
+            doplaty.append(doplata)
         if "Powder coated profiles in RAL" in wybor:
             additional_item, doplata = calculate_addition("Powder coated profiles in RAL", sheet, cena_przed)
-            additionals = {
-                "additional_item" : additional_item,
-                "doplata" : doplata
-            }
+            additional_items.append(additional_item)
+            doplaty.append(doplata)
         if "Concealed profiles" in wybor:
             additional_item, doplata = calculate_addition("Concealed profiles", sheet, cena_przed)
-            additionals = {
-                "additional_item" : additional_item,
-                "doplata" : doplata
-            }
+            additional_items.append(additional_item)
+            doplaty.append(doplata)
         if "Semiautomatic" in wybor:
             additional_item, doplata = calculate_addition("Semiautomatic", sheet, cena_przed)
-            additionals = {
-                "additional_item" : additional_item,
-                "doplata" : doplata
-            }
+            additional_items.append(additional_item)
+            doplaty.append(doplata)      
         if "Modules factory assembled" in wybor:
             i = 6
             liczba_modulow = 0
@@ -244,72 +237,56 @@ def calculate_additions(directory, nazwa_oferty):
             doplata = liczba_modulow * 100 + liczba_skrzyn * 200 + 100 * liczba_drzwi
             doplata = int(doplata)
             doplata = str(doplata) + " EUR"
-            additionals = {
-                "additional_item" : "Modules factory assembled",
-                "doplata" : doplata
-            }
-            print(f'Modules factory assembled: {doplata}')
+            additional_item = "Modules factory assembled"
+            additional_items.append(additional_item)
+            doplaty.append(doplata) 
+
         if "J" in wybor:
             additional_item, doplata = calculate_addition("J", sheet, cena_przed)
-            additionals = {
-                "additional_item" : additional_item,
-                "doplata" : doplata
-            }
+            additional_items.append(additional_item)
+            doplaty.append(doplata) 
         if "NPN" in wybor:
-                    additional_item, doplata = calculate_addition("NPN", sheet, cena_przed)
-                    additionals = {
-                        "additional_item" : additional_item,
-                        "doplata" : doplata
-                    }
+            additional_item, doplata = calculate_addition("NPN", sheet, cena_przed)
+            additional_items.append(additional_item)
+            doplaty.append(doplata) 
         if "Rails in RAL 9010" in wybor:
-                    additional_item, doplata = calculate_addition("Rails in RAL 9010", sheet, cena_przed)
-                    additionals = {
-                        "additional_item" : additional_item,
-                        "doplata" : doplata
-                    }
+            additional_item, doplata = calculate_addition("Rails in RAL 9010", sheet, cena_przed)
+            additional_items.append(additional_item)
+            doplaty.append(doplata) 
         if "Other RAL of rails" in wybor:
-                    additional_item, doplata = calculate_addition("Other RAL of rails", sheet, cena_przed)
-                    additionals = {
-                        "additional_item" : additional_item,
-                        "doplata" : doplata
-                    }
+            additional_item, doplata = calculate_addition("Other RAL of rails", sheet, cena_przed)
+            additional_items.append(additional_item)
+            doplaty.append(doplata)     
         if "45dB" in wybor:
-                    additional_item, doplata = calculate_addition("45dB", sheet, cena_przed)
-                    additionals = {
-                        "additional_item" : additional_item,
-                        "doplata" : doplata
-                    }
+            additional_item, doplata = calculate_addition("45dB", sheet, cena_przed)
+            additional_items.append(additional_item)
+            doplaty.append(doplata) 
         if "49dB" in wybor:
-                    additional_item, doplata = calculate_addition("49dB", sheet, cena_przed)
-                    additionals = {
-                        "additional_item" : additional_item,
-                        "doplata" : doplata
-                    }
+            additional_item, doplata = calculate_addition("49dB", sheet, cena_przed)
+            additional_items.append(additional_item)
+            doplaty.append(doplata) 
         if "51dB" in wybor:
-                    additional_item, doplata = calculate_addition("51dB", sheet, cena_przed)
-                    additionals = {
-                        "additional_item" : additional_item,
-                        "doplata" : doplata
-                    }
+            additional_item, doplata = calculate_addition("51dB", sheet, cena_przed)
+            additional_items.append(additional_item)
+            doplaty.append(doplata) 
         if "53dB" in wybor:
-                    additional_item, doplata = calculate_addition("53dB", sheet, cena_przed)
-                    additionals = {
-                        "additional_item" : additional_item,
-                        "doplata" : doplata
-                    }
+            additional_item, doplata = calculate_addition("53dB", sheet, cena_przed)
+            additional_items.append(additional_item)
+            doplaty.append(doplata) 
         if "54dB" in wybor:
-                    additional_item, doplata = calculate_addition("54dB", sheet, cena_przed)
-                    additionals = {
-                        "additional_item" : additional_item,
-                        "doplata" : doplata
-                    }
+            additional_item, doplata = calculate_addition("54dB", sheet, cena_przed)
+            additional_items.append(additional_item)
+            doplaty.append(doplata) 
         if "57dB" in wybor:
-                    additional_item, doplata = calculate_addition("57dB", sheet, cena_przed)
-                    additionals = {
-                        "additional_item" : additional_item,
-                        "doplata" : doplata
-                    }
-
+            additional_item, doplata = calculate_addition("57dB", sheet, cena_przed)
+            additional_items.append(additional_item)
+            doplaty.append(doplata) 
+        
         wb.Save()
         wb.Close()
         excel.Quit()
+        os.remove(str(directory) + "\\" + f"decrypted{nazwa_oferty}")
+
+    return additional_items, doplaty
+    
+        
