@@ -52,7 +52,7 @@ def calculate_additions(directory, nazwa_oferty):
         "Double door",
         "Powder coated profiles in RAL",
         "Concealed profiles",
-        "Semiautomatic",
+        "Semiautomatic (Op110 only)",
         "Modules factory assembled",
         "J",
         "NPN",
@@ -91,7 +91,7 @@ def calculate_additions(directory, nazwa_oferty):
         elif addition_type == "Concealed profiles":
             addition_value = 1
             kolumna = "L"
-        elif addition_type == "Semiautomatic":
+        elif addition_type == "Semiautomatic (Op110 only)":
             addition_value = 1
             kolumna = "V"
         elif "dB" in addition_type:
@@ -115,7 +115,7 @@ def calculate_additions(directory, nazwa_oferty):
         # Calculating each wall:
         calkowita_liczba_scian = 0
         i = 6
-        i_to_omit = []
+        calkowita_liczba_modulow = 0
         # discounts, values to save to write them back at the end
         discounts = {}
         values = {}
@@ -128,6 +128,13 @@ def calculate_additions(directory, nazwa_oferty):
             values2[i] = False
             discounts[i] = sheet.Range(f'AF{i+1}').value
             markup_bottom_line, markup_top_line = calculate_markup_bottom_top_lines(sheet.Range(f"AG{i}").value)
+
+            # adding to doors if the wall has some already
+            if "door" in addition_type and values[i] is not None:
+                addition_value = values[i] + 1
+            else:
+                addition_value = 1
+            print(addition_value)
             sheet.Range(f'{kolumna}{i}').value = addition_value
 
             # number of parking stacks (when suspension change)
@@ -151,6 +158,7 @@ def calculate_additions(directory, nazwa_oferty):
                 sheet.Range(f'{kolumna2}{i}').value = ilosc_stosow
 
             calkowita_liczba_scian += liczba_scian
+            calkowita_liczba_modulow += liczba_scian * sheet.Range(f'N{i}').value
             adjust_markup(sheet, i, markup_bottom_line, markup_top_line)
             i += 2
 
@@ -161,6 +169,10 @@ def calculate_additions(directory, nazwa_oferty):
                 doplata = int((cena_po-cena_przed)/calkowita_liczba_scian)
                 doplata = f'{doplata:,}'.replace(",", " ")
                 doplata = str(doplata) + " EUR / door"
+            elif "Semiautomatic (Op110 only)" in addition_type:
+                doplata = int((cena_po-cena_przed)/calkowita_liczba_modulow)
+                doplata = f'{doplata:,}'.replace(",", " ")
+                doplata = str(doplata) + " EUR / module"
             else:
                 doplata = int(cena_po-cena_przed)
                 doplata = f'{doplata:,}'.replace(",", " ")
@@ -212,8 +224,8 @@ def calculate_additions(directory, nazwa_oferty):
             additional_item, doplata = calculate_addition("Concealed profiles", sheet, cena_przed)
             additional_items.append(additional_item)
             doplaty.append(doplata)
-        if "Semiautomatic" in wybor:
-            additional_item, doplata = calculate_addition("Semiautomatic", sheet, cena_przed)
+        if "Semiautomatic (Op110 only)" in wybor:
+            additional_item, doplata = calculate_addition("Semiautomatic (Op110 only)", sheet, cena_przed)
             additional_items.append(additional_item)
             doplaty.append(doplata)      
         if "Modules factory assembled" in wybor:
@@ -236,6 +248,7 @@ def calculate_additions(directory, nazwa_oferty):
                 liczba_skrzyn = int(liczba_skrzyn)
             doplata = liczba_modulow * 100 + liczba_skrzyn * 200 + 100 * liczba_drzwi
             doplata = int(doplata)
+            doplata = f'{doplata:,}'.replace(",", " ")
             doplata = str(doplata) + " EUR"
             additional_item = "Modules factory assembled"
             additional_items.append(additional_item)

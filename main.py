@@ -9,7 +9,7 @@ from files_managment import open_calculator, open_offer, update_summary_table, s
 def run_program():
     """Running the program"""
     # Opening calculator and offer files.
-    directory = Path(__file__).parent
+    directory = Path.cwd()
     nazwa_oferty = next(directory.glob("*.xlsx")).name
 
     calculator_sheet = open_calculator(nazwa_oferty)['KALKULATOR']
@@ -19,13 +19,18 @@ def run_program():
     i = 6
     nowa_tabela = doc.tables[2]
     calkowita_liczba_scian = 0
-    
+
+    cena_szkla_total = 0
     plyta_wybrana = False
 
     while True:
         data = load_data(calculator_sheet, nazwa_oferty, i)
         data["plyta_wybrana"] = plyta_wybrana
-        transformed_data = transform_data(data) 
+        transformed_data = transform_data(data)
+
+        # calculating total price including glass of OP50
+        cena_szkla_total += transformed_data["cena_szkla"]
+
         plyta_wybrana = transformed_data['plyta_wybrana']
         liczba_scian = transformed_data["liczba_scian"]
 
@@ -53,7 +58,12 @@ def run_program():
 
     additional_items, doplaty = calculate_additions(directory, nazwa_oferty)
 
-    update_summary_table(doc, calkowita_liczba_scian, transformed_data["cena_wszystkich"], additional_items, doplaty)
+    cena_wszystkich = data["cena_wszystkich"] + cena_szkla_total
+    cena_wszystkich = f'{cena_wszystkich:,}'.replace(",", " ")
+    cena_wszystkich = str(cena_wszystkich)
+    cena_wszystkich = cena_wszystkich.split(".")[0]
+
+    update_summary_table(doc, calkowita_liczba_scian, cena_wszystkich, additional_items, doplaty)
     save_offer(doc, nazwa_oferty)
     sys.exit()
 

@@ -56,7 +56,8 @@ def transform_data(data):
     dlugosc = f'{data["dlugosc"]:,}'.replace(",", " ")
     wysokosc = f'{data["wysokosc"]:,}'.replace(",", " ")
     dlugosc, wysokosc = str(dlugosc), str(wysokosc)
-
+    cena_szkla = 0
+    
     # Mapping acoustics level
     if str(data["akustyka"]).strip().lower() == "ei":
         akustyka = 52
@@ -74,12 +75,13 @@ def transform_data(data):
         if data['plyta_raw'] == "BEZ PŁYT":
             items.append("Optimal 50 glass")
         op50 = popups.wybor_popup(items)
-
+        
         if "Optimal 50" in op50:
             system = "Optimal 50"
             certyfikacja_BRI = ""
             if "glass" in op50:
-                data["cena"] += data["dlugosc"] / 1000 * data['wysokosc'] / 1000 * 275 / 4.3
+                cena_szkla = data["dlugosc"] / 1000 * data['wysokosc'] / 1000 * 275 / 4.3
+                data["cena"] += cena_szkla
                 akustyka = 33
             else:
                 akustyka = 32
@@ -251,7 +253,6 @@ def transform_data(data):
     cena_wszystkich = str(cena_wszystkich)
     cena_wszystkich = cena_wszystkich.split(".")[0]
 
-
     data = {
         "dlugosc" : dlugosc,
         "wysokosc" : wysokosc,
@@ -274,7 +275,8 @@ def transform_data(data):
         "projekt" : projekt,
         "plyta_wybrana" : data["plyta_wybrana"],
         "certyfikacja_BRI" : certyfikacja_BRI,
-        "system" : system
+        "system" : system,
+        "cena_szkla" : cena_szkla
     }
 
     return data
