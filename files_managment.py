@@ -127,7 +127,10 @@ def update_summary_table(doc, calkowita_liczba_scian, cena_wszystkich, additiona
             new_line = summary_table.add_row()
             new_line.cells[1].merge(new_line.cells[2])
             new_line.cells[0].text = f"{additional_items[_]}:"
-            new_line.cells[1].text = f"+ {doplaty[_]}"
+            if "-" in doplaty[_]:
+                new_line.cells[1].text = f"- {doplaty[_][1:]}"
+            else:
+                new_line.cells[1].text = f"+ {doplaty[_]}"
             new_line.height = old_line.height
 
             

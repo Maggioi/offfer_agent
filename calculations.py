@@ -132,8 +132,6 @@ def calculate_additions(directory, nazwa_oferty):
             # adding to doors if the wall has some already
             if "door" in addition_type and values[i] is not None:
                 addition_value = values[i] + 1
-            else:
-                addition_value = 1
             print(addition_value)
             sheet.Range(f'{kolumna}{i}').value = addition_value
 
