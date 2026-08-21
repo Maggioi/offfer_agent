@@ -62,7 +62,7 @@ def open_offer(doc, tabela, data, nr_sciany):
                 if "certyfikacja" in run.text:
                     run.text = run.text.replace("certyfikacja", data["certyfikacja_BRI"])
                 
-                if "ile" in run.text:
+                if "jaki" in run.text:
                     run.text = run.text.replace("ile", data["system"])
 
                 # Safe replacement for Dimensions (L)
